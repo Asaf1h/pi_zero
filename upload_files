@@ -100,8 +100,8 @@ def main(mission_num, txt, line_num=None):
     print(' * '*7)
 
 
-with open(r"C:\Users\97254\Desktop\test1.py", 'r') as f:
-    txt = f.readlines()
+txt = ['a = "hello"\n', 'b = "  wrold"\n', 'return a + b1']
+
 mission_num = 2
 
 main(mission_num, txt)
