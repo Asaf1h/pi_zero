@@ -1,0 +1,111 @@
+import time
+import os
+
+
+def upload_line(mission, line, line_num):
+    bmission = mission.to_bytes(1, 'little')
+    bline_num = line_num.to_bytes(1, 'little')
+    return bmission + bline_num + (line).encode()
+
+
+def insert_line(l, line_num, line):
+    if len(l) - 3 < line_num:
+        l.insert(line_num, line)
+    elif len(l) - 3 >= line_num:
+        l[line_num] = line
+    else:
+        [l.append('\n') for i in range((line_num) - len(l) - 3)]
+        l.insert(line_num, line)
+
+
+def upload_file(mission, btxt):
+    mission = mission.to_bytes(1, 'little')
+    #chunk = len(txtfile)//256 + 1
+    txt = [mission + i.to_bytes(1, 'little') + line.encode()
+           for i, line in enumerate(btxt)]
+    return txt
+
+
+def writing_file(bytearr):
+    file_num, num_line = bytearr[0], bytearr[1]
+    line = ' '*4 + bytearr[2:].decode()  # כרגע מוגבלים ל255 שורות
+    num_line += 1  # cuz main(),
+    file_name = 'script{}'.format(file_num)
+    dirc = r"C:\Users\97254\Desktop\{}.py".format(file_name)
+    # check if file exist
+    if os.path.isfile(dirc) and num_line > 1:
+        with open(dirc, 'r') as f:  # check if a or r לבדוק איך נכון לשלוח את הקבצים. והאם צאנק או שורות
+            file = f.readlines()
+    else:
+        file = []
+        new_file = ['def main():\n', 'if __name__ == "__main__":\n',
+                    '    main()\n']
+        file.append(new_file[0])
+        file.append(line)
+        file = file + new_file[1:]
+
+    execute = False
+
+    if line.find('\n') == -1:
+        line += '\n'
+        execute = True
+
+    insert_line(file, num_line, line)
+
+    with open(dirc, 'w') as f:
+        f.writelines(file)
+
+    if execute:
+        return execute, file_name
+
+
+def execute_file(file_name):
+    def module_from_file(module_name, file_path):
+        import importlib
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    try:
+        script = module_from_file(
+            file_name, r"C:\Users\97254\Desktop\{}.py".format(file_name))
+        info = script.main()
+
+    except Exception as e:
+        import sys
+        from traceback import format_tb
+        exception_type, exception_object, exception_traceback = sys.exc_info()
+        eror = format_tb(exception_traceback)[-1]
+        line_num = eror[eror.find(',') + 1: eror.rfind(',')
+                        ].replace('line', '').strip()
+        info = file_name, line_num, exception_object
+    return info
+
+
+def main(mission_num, txt, line_num=None):
+    if isinstance(txt, list):
+        txtfile = upload_file(mission_num, txt)
+        for line in txtfile:
+            writing_file(line)
+    else:
+        line = upload_line(mission_num, txt, line_num)
+        writing_file(line)
+
+    last_line, file_name = line[2:].decode(), 'script' + str(line[0])
+    execute = True if last_line.find('\n') else False  # לתקן?
+    if execute:
+        print(execute_file(file_name))
+
+    print(' * '*7)
+
+
+with open(r"C:\Users\97254\Desktop\test1.py", 'r') as f:
+    txt = f.readlines()
+mission_num = 2
+
+main(mission_num, txt)
+main(mission_num,  'return a + c', 2)
+main(mission_num,  'retrn a + b', 2)
+time.sleep(0.5)
+main(mission_num,  'return a + b', 2)
