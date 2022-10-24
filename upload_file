@@ -1,0 +1,147 @@
+import time
+import os
+
+
+# TODO לקחת בחשבון שצריך בדוק את עניין עדכון החבילות
+
+
+def ready_to_upload(mission, txt, line_num=0):
+    bmission = mission.to_bytes(1, 'little')
+    # chunk = len(txtfile)//256 + 1
+    if line_num:
+        line = txt
+        bline_num = line_num.to_bytes(1, 'little')
+        btxt = [bmission + bline_num + (line).encode()]
+    else:
+        btxt = [bmission + (line_num + 1).to_bytes(1, 'little') + line.encode()
+                for line_num, line in enumerate(txt)]
+    return btxt
+
+
+def insert_line(script, line_num, line):
+    x = -1 if script[-1] == '#Execute script'else 0
+    line_num -= 1  # we added one erlier
+    if len(script) - 2 + x == line_num:
+        script.insert(line_num, line)
+        script[line_num] = line
+    elif len(script) - 3 + x >= line_num:
+        script[line_num] = line
+    else:
+        [script.insert(i - 2, '\n')
+         for i in range(len(script) + x, line_num + 2)]
+        script.insert(line_num, line)
+
+
+def writing_file(bytearr):
+    # defultive script
+    """
+    def main():
+        ... your script
+    if __name__ == "__main__"
+        main()
+    """
+    file_num, num_line = bytearr[0], bytearr[1]
+    Tab = ' '*4
+    line = Tab + bytearr[2:].decode()
+
+    num_line += 1  # cuz main():
+    file_name = 'script{}'.format(file_num)
+    dirc = r"C:\Users\97254\Desktop\{}.py".format(file_name)
+    # check if file exist
+    if os.path.isfile(dirc):
+        # TODO check if a or r לבדוק איך נכון לשלוח את הקבצים. והאם צאנק או שורות
+        with open(dirc, 'r') as f:
+            file = f.readlines()
+    else:
+        file = []
+        file = ['def main():\n', 'if __name__ == "__main__":\n',
+                '    main()\n']
+
+    if not any(arg in line for arg in ['\n', '#Execute script']):
+        line += '\n'
+        file.append('#Execute script')
+
+    insert_line(file, num_line, line)
+    with open(dirc, 'w') as f:
+        f.writelines(file)
+
+
+def reset_file(mission):
+    file = ['def main():\n', 'if __name__ == "__main__":\n',
+            '    main()\n']
+    file_name = 'script{}'.format(mission)
+    dirc = r"C:\Users\97254\Desktop\{}.py".format(file_name)
+    with open(dirc, 'w') as f:
+        f.writelines(file)
+
+
+def execute_file(file_name):
+    def module_from_file(module_name, file_path):
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    try:
+        script = module_from_file(
+            file_name, r"C:\Users\97254\Desktop\{}.py".format(file_name))
+        info = script.main()
+
+    except Exception as e:
+        import sys
+        from traceback import format_tb
+        exception_type, exception_object, exception_traceback = sys.exc_info()
+        eror = format_tb(exception_traceback)[-1]
+        line_num = eror[eror.find(',') + 1: eror.rfind(',')
+                        ].replace('line', '').strip()
+        info = file_name, int(line_num) - 1, exception_object
+    return info
+
+
+def check_execute(line):
+    last_line, file_name = line[2:].decode(), 'script' + str(line[0])
+    execute = False if last_line.find('\n') else True
+    if execute:
+        return True
+
+    dirc = r"C:\Users\97254\Desktop\{}.py".format(file_name)
+    with open(dirc, 'r') as f:
+        last_line = f.readlines()[-1]
+        return True if last_line == '#Execute script' else False
+
+
+def testing(mission_num, txt, line_num=None, reset=False):
+    # ground station  -> string or list into byte arrey
+    btxtfile = ready_to_upload(mission_num, txt, line_num)
+
+    # setallite station
+    if reset:
+        reset_file(mission_num)
+
+    for line in btxtfile:
+        writing_file(line)
+
+    last_line = line
+    if check_execute(last_line):
+        file_name = 'script' + str(last_line[0])
+        print(execute_file(file_name))
+
+        return(execute_file(file_name))
+    #time.sleep(0.5)
+
+
+txt = ['a = "hello"\n', 'b = "  wrold"\n', 'return a + b1']
+
+mission_num = 1
+testing(mission_num, txt, reset=True)
+testing(mission_num,  'a = int("a") ', 3)
+testing(mission_num,  'a = 4/0 ', 3)
+testing(mission_num,  'a = a[100] ', 3)
+testing(mission_num,  'a = 3[0] ', 3)
+testing(mission_num,  'ret a + b', 3)
+testing(mission_num,  'return a + c', 3)
+testing(mission_num,  'return a + b', 3)
+print(' * '*7)
+testing(mission_num,  'a = 1 + 2\n', 1, reset=True)
+testing(mission_num,  'return a', 2)
