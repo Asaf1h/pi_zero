@@ -46,7 +46,7 @@ def writing_file(bytearr):
 
     num_line += 1  # cuz main():
     file_name = 'script{}'.format(file_num)
-    dirc = r"./folder/{}.py".format(file_name)
+    dirc = r"~/folder/{}.py".format(file_name)
     # check if file exist
     if os.path.isfile(dirc):
         # TODO check if a or r לבדוק איך נכון לשלוח את הקבצים. והאם צאנק או שורות
@@ -70,7 +70,7 @@ def reset_file(mission):
     file = ['def main():\n', 'if __name__ == "__main__":\n',
             '    main()\n']
     file_name = 'script{}'.format(mission)
-    dirc = r"./folder/{}.py".format(file_name)
+    dirc = r"~/folder/{}.py".format(file_name)
     with open(dirc, 'w') as f:
         f.writelines(file)
 
@@ -105,7 +105,7 @@ def check_execute(line):
     if execute:
         return True
 
-    dirc = r"./folder/{}.py".format(file_name)
+    dirc = r"~/folder/{}.py".format(file_name)
     with open(dirc, 'r') as f:
         last_line = f.readlines()[-1]
         return True if last_line == '#Execute script' else False
